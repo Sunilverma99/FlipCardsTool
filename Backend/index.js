@@ -1,8 +1,12 @@
 
 import express from "express";
+import path from "path";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import mongoose from 'mongoose';
+import mysql2 from 'mysql2';
+
+const configobj=process.env.MYSQL
 
  import authRouter from "./routes/auth.router.js"
  import flashCardRouter from "./routes/flashcard.router.js"
@@ -13,13 +17,17 @@ dotenv.config();
 const PORT =  5000;
 const app = express();
 
+const __dirname=path.resolve();
 
- mongoose.connect(process.env.MONGO, {
+const mysqlConnection = mysql2.createConnection(configobj);
 
-}).then(() => {
-  console.log("Connected to MongoDB");
-}).catch((err) => {
-  console.error("Error connecting to MongoDB:", err);
+mysqlConnection.connect((err) => {
+  if (!err) {
+      console.log("Connected to MySQL");
+  } else {
+    console.log(err.message);
+      console.log("Connection failed");
+  }
 });
 
 
@@ -29,6 +37,10 @@ app.use(cors());
 
 app.listen(PORT, () => {
   console.log(`Server Running on port ${PORT}`); 
+});
+app.use(express.static(path.join(__dirname,"/Frontend/dist")))
+app.get("*",(req,res)=>{
+   res.sendFile(path.join(__dirname,"Frontend","dist","index.html"))
 });
 app.use("/api",authRouter);
 app.use("/api",flashCardRouter);
@@ -41,3 +53,4 @@ app.use((err,req,res,next)=>{
       message:message,
      })
 });
+export {mysqlConnection};

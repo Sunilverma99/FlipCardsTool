@@ -40,7 +40,7 @@ function Create_FlashCards() {
           category: '',
           tags: '',
         });
-        navigate(`/question/${data._id}`);
+        navigate(`/question/${data.cardID}`);
       }
     } catch (error) {
       toast.error('An error occurred. Please try again.');

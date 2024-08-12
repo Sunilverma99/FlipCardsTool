@@ -1,64 +1,174 @@
 import Flashcard from '../models/flashcard.model.js';
 import errHandler from '../utlies/error.js';
-const createFlashcard = async (req, res,next) => {
-//   if(!req.user.isAdmin){
-//     return next(errHandler(401,"You are not allowed to create a flashcard"));
-//   }
-  if(!req.body.question || !req.body.answer || !req.body.category){
-    return next(errHandler(400,"Question, answer and category are required"));
+import { mysqlConnection } from '../index.js';
+const createFlashcard = async (req, res, next) => {
+    const { question, answer, category, tags } = req.body;
+    console.log(req.body);
+    if (!question || !answer || !category) {
+      return next(errHandler(400, "Question, answer, and category are required"));
     }
     try {
-        const flashcard = await Flashcard.create(req.body);
-       const savedFlashCard=await  flashcard.save();
-        res.status(201).json(savedFlashCard);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-};
+      mysqlConnection.query(
+        "INSERT INTO flashcard (question, answer, category, tags) VALUES (?, ?, ?, ?)",
+        [question, answer, category, JSON.stringify(tags)], 
+        (err, result) => {
+          if (err) {
+            console.error("MySQL Error: ", err);
+            return next(errHandler(500, "Internal Server Error"));
+          }
 
-const getFlashcards = async (req, res) => {
-    try {
-        const flashcards = await Flashcard.find();
-        res.status(200).json(flashcards);
+          const flashcardId = result.insertId;
+          mysqlConnection.query(
+            "SELECT * FROM flashcard WHERE cardID = ?",
+            [flashcardId],
+            (err, flashcardResult) => {
+              if (err) {
+                console.error("MySQL Error: ", err);
+                return next(errHandler(500, "Internal Server Error"));
+              }
+  
+              const savedFlashCard = flashcardResult[0]; 
+  
+              res.status(201).json(savedFlashCard);
+            }
+          );
+        }
+      );
     } catch (error) {
-        res.status(404).json({ message: error.message });
+      console.error("Error: ", error);
+      return next(errHandler(500, "Internal Server Error"));
     }
-};
+  };
 
-const getFlashcardById = async (req, res) => {
+
+  const getFlashcards = async (req, res, next) => {
     try {
-        const flashcard = await Flashcard.findById(req.params.id);
-        if (!flashcard) {
-            return res.status(404).json({ message: 'Flashcard not found' });
+      mysqlConnection.query("SELECT * FROM flashcard", (err, results) => {
+        if (err) {
+          console.error("MySQL Error: ", err);
+          return next(errHandler(500, "Internal Server Error"));
         }
-        res.status(200).json(flashcard);
+
+        const formattedResults = results.map(flashcard => {
+          if (flashcard.tags) {
+            flashcard.tags = flashcard.tags
+              .replace(/^"|"$/g, '')  // Remove starting and ending double quotes
+              .split(',')
+              .map(tag => tag.trim());
+          }
+          return flashcard;
+        });
+  
+        res.status(200).json(formattedResults);
+      });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+      console.error("Error: ", error);
+      return next(errHandler(500, "Internal Server Error"));
     }
-};
-const updateFlashcard = async (req, res) => {
+  };
+  
+
+  const getFlashcardById = async (req, res, next) => {
+    const { id } = req.params;
+  
     try {
-        const flashcard = await Flashcard.findByIdAndUpdate
-        (req.params.id, req.body, { new: true, runValidators: true });
-        if (!flashcard) {
-            return res.status(404).json({ message: 'Flashcard not found' });
-        }
-        res.status(200).json(flashcard);
-    }
-    catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+      mysqlConnection.query(
+        "SELECT * FROM flashcard WHERE cardID = ?",
+        [id],
+        (err, results) => {
+          if (err) {
+            console.error("MySQL Error: ", err);
+            return next(errHandler(500, "Internal Server Error"));
+          }
+  
+          if (results.length === 0) {
+            return res.status(404).json({ message: "Flashcard not found" });
+          }
+  
+          // Transform tags from comma-separated string to an array
+          const flashcard = results[0];
+if (flashcard && flashcard.tags) {
+  flashcard.tags = flashcard.tags
+    .replace(/^"|"$/g, '')  // Remove starting and ending double quotes
+    .split(',')
+    .map(tag => tag.trim());
 }
-const deleteFlashcard = async (req, res) => {
-    try {
-        const flashcard = await Flashcard.findByIdAndDelete(req.params.id);
-        if (!flashcard) {
-            return res.status(404).json({ message: 'Flashcard not found' });
+
+  
+          res.status(200).json(flashcard);
         }
-        res.status(200).json({ message: 'Flashcard deleted successfully' });
+      );
     } catch (error) {
-        res.status(500).json({ message: error.message });
+      console.error("Error: ", error);
+      return next(errHandler(500, "Internal Server Error"));
     }
-}
+  };
+  const updateFlashcard = async (req, res, next) => {
+    const { id } = req.params;
+    const updates = req.body;
+  
+    const setClause = Object.keys(updates)
+      .map((key, index) => `${key} = ?`)
+      .join(", ");
+    const values = [...Object.values(updates), id];
+  
+    try {
+      mysqlConnection.query(
+        `UPDATE flashcard SET ${setClause} WHERE cardID = ?`,
+        values,
+        (err, result) => {
+          if (err) {
+            console.error("MySQL Error: ", err);
+            return next(errHandler(500, "Internal Server Error"));
+          }
+
+          if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Flashcard not found" });
+          }
+  
+          mysqlConnection.query(
+            "SELECT * FROM flashcard WHERE cardID = ?",
+            [id],
+            (err, flashcardResult) => {
+              if (err) {
+                console.error("MySQL Error: ", err);
+                return next(errHandler(500, "Internal Server Error"));
+              }
+
+              res.status(200).json(flashcardResult[0]);
+            }
+          );
+        }
+      );
+    } catch (error) {
+      console.error("Error: ", error);
+      return next(errHandler(500, "Internal Server Error"));
+    }
+  };
+  const deleteFlashcard = async (req, res, next) => {
+    const { id } = req.params;
+    try {
+      mysqlConnection.query(
+        "DELETE FROM flashcard WHERE cardID = ?",
+        [id],
+        (err, result) => {
+          if (err) {
+            console.error("MySQL Error: ", err);
+            return next(errHandler(500, "Internal Server Error"));
+          }
+  
+          if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Flashcard not found" });
+          }
+  
+          
+          res.status(200).json({ message: "Flashcard deleted successfully" });
+        }
+      );
+    } catch (error) {
+      console.error("Error: ", error);
+      return next(errHandler(500, "Internal Server Error"));
+    }
+  };
 
 export { createFlashcard, getFlashcards, getFlashcardById, updateFlashcard, deleteFlashcard };

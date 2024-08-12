@@ -36,7 +36,7 @@ function Home() {
   }, [questions]);
 
   const handleDeleteFlashCard = async () => {
-    if(currentUser && currentUser.isAdmin){
+    if(currentUser && currentUser.isAdmin==1){
       try {
         const response = await fetch(`http://localhost:5000/api/flashCard/delete/${deletedCard_id}`, {
           method: 'DELETE',
@@ -68,7 +68,7 @@ function Home() {
   // Pagination logic
   const totalPages = Math.ceil(questions.length / questionsPerPage);
 
-  if (currentUser && currentUser.isAdmin) {
+  if (currentUser && currentUser.isAdmin==1) {
     return (
       <div>
         <div className='flex flex-wrap gap-8 py-2 justify-center'>
@@ -110,16 +110,16 @@ function Home() {
                   <td className="px-6 py-4">{question.question}</td>
                   <td className="px-6 py-4">{question.category}</td>
                   <td className="px-6 py-4 text-green-500">
-                    <Link to={`/question/update/${question._id}`}>Edit</Link>
+                    <Link to={`/question/update/${question.cardID}`}>Edit</Link>
                   </td>
                   <td className="px-6 py-4 text-red-500">
                     <button onClick={() => {
-                      setDeletedCard_id(question._id);
+                      setDeletedCard_id(question.cardID);
                       setShowModel(true);
                     }}>Delete</button>
                   </td>
                   <td className="px-6 py-4 text-blue-500">
-                    <Link to={`question/${question._id}`}>Visit</Link>
+                    <Link to={`question/${question.cardID}`}>Visit</Link>
                   </td>
                 </tr>
               ))}
@@ -213,7 +213,7 @@ function Home() {
                   <td className="px-6 py-4">{question.question}</td>
                   <td className="px-6 py-4">{question.category}</td>
                   <td className="px-6 py-4 text-blue-500">
-                    <Link to={`question/${question._id}`}>Visit</Link>
+                    <Link to={`question/${question.cardID}`}>Visit</Link>
                   </td>
                 </tr>
               ))}
