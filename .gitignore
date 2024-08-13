@@ -1,6 +1,11 @@
 # Ignore environment variables file
 .env
+<<<<<<< HEAD
 Backend/.env
+=======
+Backend\.env
+>>>>>>> d770810 (done)
 
 # Ignore Node.js dependencies
 node_modules/
+Backend\node_modules/
