@@ -6,11 +6,7 @@ import cookieParser from "cookie-parser";
 import mongoose from 'mongoose';
 import mysql2 from 'mysql2';
 
-<<<<<<< HEAD
 const configobj=process.env.MYSQL
-=======
-const configobj=process.env.MYSQL;
->>>>>>> d770810 (done)
 
  import authRouter from "./routes/auth.router.js"
  import flashCardRouter from "./routes/flashcard.router.js"
